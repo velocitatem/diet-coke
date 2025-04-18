@@ -1,0 +1,17 @@
+dataset:
+  name: "imdb"
+  n_train: 5000
+  n_test: 1000
+  seed: 42
+
+tokenizer:
+  name: "bert-base-uncased"
+  max_length: 128
+  truncation: true
+  padding: "max_length"
+
+vectorizer:
+  max_features: 5000
+  ngram_range: [1, 2]
+  stop_words: "english"
+  lowercase: true 

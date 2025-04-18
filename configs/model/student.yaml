@@ -1,0 +1,7 @@
+student:
+  criterion: "entropy"
+  max_depth: 24
+  min_samples_split: 5
+  min_samples_leaf: 2
+  max_features: null  # Use all features
+  class_weight: "balanced" 

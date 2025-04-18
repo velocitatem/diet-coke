@@ -1,0 +1,24 @@
+defaults:
+  - data
+  - model/teacher
+  - model/student
+  - distill
+  - train
+  - _self_
+
+# Output directory for logs and artifacts
+output_dir: ${hydra:runtime.cwd}/outputs/${now:%Y-%m-%d_%H-%M-%S}
+
+# Paths to save models and artifacts
+paths:
+  checkpoints: ${output_dir}/checkpoints
+  teacher_model: ${paths.checkpoints}/teacher.ckpt
+  student_model: ${output_dir}/artifacts/student.pkl
+  tokenizer: ${output_dir}/artifacts/tokenizer
+  vectorizer: ${output_dir}/artifacts/vectorizer.pkl
+  distill_data: ${output_dir}/artifacts/distill_train.parquet
+  evaluation_report: ${output_dir}/evaluation_report.json
+
+# Logging
+logging:
+  tensorboard_log_dir: ${output_dir}/tensorboard 

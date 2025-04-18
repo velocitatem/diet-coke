@@ -1,0 +1,11 @@
+train:
+  epochs: 3
+  batch_size: 16
+  seed: 42
+  early_stopping_patience: 2
+  accumulate_grad_batches: 1
+  device: "auto"  # "auto", "cuda", "cpu"
+  fp16: false  # Whether to use mixed precision training
+
+eval:
+  batch_size: 32 

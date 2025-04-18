@@ -1,0 +1,121 @@
+#!/usr/bin/env python
+"""
+Script for distilling knowledge from BERT to Decision Tree.
+"""
+import os
+import sys
+import json
+from typing import Dict, Any
+import hydra
+import torch
+import pandas as pd
+import numpy as np
+import pytorch_lightning as pl
+from omegaconf import DictConfig, OmegaConf
+
+# Add the project root to the Python path if not already added
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from src.data.imdb_datamodule import IMDBDataModule
+from src.models.teacher import TeacherModel
+from src.models.student import StudentModel
+from src.models.distiller import Distiller
+from src.utils.logging import setup_logging
+from src.utils.seed import set_seed
+
+
+@hydra.main(config_path="../configs", config_name="config", version_base=None)
+def main(cfg: DictConfig) -> None:
+    """Main function for distilling from teacher to student.
+    
+    Args:
+        cfg: Configuration object
+    """
+    # Set random seed for reproducibility
+    set_seed(cfg.train.seed)
+    
+    # Set up logging
+    logger, console, tb_writer = setup_logging(cfg)
+    logger.info("Starting distillation from BERT to Decision Tree...")
+    
+    # Create output directories
+    os.makedirs(os.path.dirname(cfg.paths.student_model), exist_ok=True)
+    
+    # Print config
+    logger.info(f"Configuration:\n{OmegaConf.to_yaml(cfg)}")
+    
+    # Initialize data module
+    logger.info("Initializing data module...")
+    datamodule = IMDBDataModule(cfg)
+    datamodule.prepare_data()
+    datamodule.setup(stage="fit")
+    
+    # Load teacher model
+    logger.info(f"Loading teacher model from {cfg.paths.teacher_model}...")
+    teacher = TeacherModel.load_from_checkpoint(cfg.paths.teacher_model, cfg=cfg)
+    teacher.eval()
+    
+    # Extract TF-IDF features
+    logger.info("Extracting TF-IDF features...")
+    train_df, tfidf_features = datamodule.get_tfidf_data()
+    
+    # Initialize distiller
+    logger.info("Initializing distiller...")
+    distiller = Distiller(cfg, writer=tb_writer)
+    
+    # Perform distillation
+    logger.info("Performing distillation...")
+    student, distill_df = distiller.distill(
+        teacher=teacher,
+        dataloader=datamodule.train_dataloader(),
+        tfidf_features=tfidf_features,
+        texts=train_df['text'].tolist()
+    )
+    
+    # Save student model and vectorizer
+    logger.info(f"Saving student model to {cfg.paths.student_model}...")
+    student.save(cfg.paths.student_model)
+    
+    logger.info(f"Saving TF-IDF vectorizer to {cfg.paths.vectorizer}...")
+    datamodule.save_vectorizer(cfg.paths.vectorizer)
+    
+    # Save distillation data
+    logger.info(f"Saving distillation data to {cfg.paths.distill_data}...")
+    os.makedirs(os.path.dirname(cfg.paths.distill_data), exist_ok=True)
+    distill_df.to_parquet(cfg.paths.distill_data)
+    
+    # Evaluate fidelity
+    logger.info("Evaluating fidelity on training data...")
+    teacher_logits, _ = teacher.get_logits(datamodule.train_dataloader())
+    teacher_probs = torch.nn.functional.softmax(teacher_logits / cfg.T, dim=1).numpy()
+    
+    fidelity_metrics = distiller.evaluate_fidelity(
+        student=student,
+        teacher_outputs=teacher_probs,
+        tfidf_features=tfidf_features
+    )
+    
+    # Log fidelity metrics
+    for key, value in fidelity_metrics.items():
+        logger.info(f"{key}: {value:.4f}")
+    
+    # Get tree info
+    tree_info = student.get_tree_info()
+    logger.info(f"Tree info: {tree_info}")
+    
+    # Save metrics
+    metrics = {**fidelity_metrics, **tree_info}
+    metrics_file = os.path.join(os.path.dirname(cfg.paths.student_model), "distill_metrics.json")
+    with open(metrics_file, "w") as f:
+        # Convert any numpy values to Python types
+        serializable_metrics = {k: v.item() if isinstance(v, np.number) else v for k, v in metrics.items()}
+        json.dump(serializable_metrics, f, indent=2)
+    
+    logger.info(f"Distillation metrics saved to {metrics_file}")
+    logger.info("Distillation completed!")
+
+
+if __name__ == "__main__":
+    main() 

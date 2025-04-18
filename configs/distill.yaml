@@ -1,0 +1,8 @@
+# Distillation parameters
+T: 4  # Temperature for softening the teacher's logits
+alpha: 0.5  # Weight given to soft targets (1-alpha) is for hard targets
+
+# Options
+use_proba: true  # Whether to use probability output (true) or logits (false)
+balanced_weights: true  # Apply sample weights to balance classes
+target_type: "classification"  # "classification" or "regression" 
