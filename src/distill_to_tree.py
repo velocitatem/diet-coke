@@ -148,47 +148,53 @@ def main(cfg: DictConfig) -> None:
     
     # Register model in the registry
     if cfg.get("registry", {}).get("enabled", False):
-        logger.info("Registering model in the registry...")
-        registry_dir = cfg.registry.get("dir", os.path.join(project_root, "model_registry"))
-        
-        # Create model registrar
-        registrar = ModelRegistrar(registry_dir)
-        
-        # Generate model ID if not specified
-        model_id = cfg.registry.get("model_id", None)
-        
-        # Generate description if not specified
-        model_type = cfg.model.student.get("model_type", "decision_tree")
-        task_type = cfg.get("target_type", "classification")
-        description = cfg.registry.get("description", 
-            f"{model_type.capitalize()} model distilled from BERT for {task_type} on {cfg.data.dataset_name}"
-        )
-        
-        # Register the model
-        model_id = registrar.register_from_run(
-            output_dir=cfg.output_dir,
-            model_id=model_id,
-            description=description,
-            metrics=serializable_metrics,
-            evaluation_file="distill_metrics.json"
-        )
-        
-        if model_id:
-            logger.info(f"Model registered with ID: {model_id}")
+        try:
+            logger.info("Registering model in the registry...")
+            registry_dir = cfg.registry.get("dir", os.path.join(project_root, "model_registry"))
             
-            # Export best models for inference if requested
-            if cfg.registry.get("export_best", False):
-                inference_dir = cfg.registry.get("inference_dir", os.path.join(project_root, "inference", "models"))
+            # Create model registrar
+            registrar = ModelRegistrar(registry_dir)
+            
+            # Generate model ID if not specified
+            model_id = cfg.registry.get("model_id", None)
+            
+            # Generate description if not specified
+            model_type = cfg.model.student.get("model_type", "decision_tree")
+            task_type = cfg.get("target_type", "classification")
+            description = cfg.registry.get("description", 
+                f"{model_type.capitalize()} model distilled from BERT for {task_type} on {cfg.data.dataset_name}"
+            )
+            
+            # Register the model
+            model_id = registrar.register_from_run(
+                output_dir=cfg.output_dir,
+                model_id=model_id,
+                description=description,
+                metrics=serializable_metrics,
+                evaluation_file="distill_metrics.json"
+            )
+            
+            if model_id:
+                logger.info(f"Model registered with ID: {model_id}")
                 
-                exported = registrar.register_best_models_for_inference(
-                    inference_dir=inference_dir,
-                    task_types=[task_type],
-                    model_types=None  # Export all model types
-                )
-                
-                logger.info(f"Exported {len(exported)} best models to {inference_dir}")
-        else:
-            logger.error("Failed to register model in the registry")
+                # Export best models for inference if requested
+                if cfg.registry.get("export_best", False):
+                    inference_dir = cfg.registry.get("inference_dir", os.path.join(project_root, "inference", "models"))
+                    
+                    exported = registrar.register_best_models_for_inference(
+                        inference_dir=inference_dir,
+                        task_types=[task_type],
+                        model_types=None  # Export all model types
+                    )
+                    
+                    logger.info(f"Exported {len(exported)} best models to {inference_dir}")
+            else:
+                logger.error("Failed to register model in the registry")
+        except Exception as e:
+            logger.error(f"Error during model registration: {e}")
+            logger.info("Continuing without model registration.")
+    else:
+        logger.info("Model registry is disabled. Skipping registration.")
     
     logger.info("Distillation completed!")
 

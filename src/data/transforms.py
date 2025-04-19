@@ -54,20 +54,54 @@ def create_tfidf_features(
 
 
 def softmax_with_temperature(logits: np.ndarray, temperature: float = 1.0) -> np.ndarray:
-    """Apply temperature scaling and softmax to logits.
+    """Apply softmax with temperature scaling.
     
     Args:
-        logits: Array of shape (n_samples, n_classes)
-        temperature: Temperature parameter (T > 1 makes distribution softer)
+        logits: Raw logits of shape (n_samples, n_classes)
+        temperature: Temperature parameter (higher = softer probabilities)
         
     Returns:
-        Array of softmax probabilities with the same shape as logits
+        Soft probabilities of shape (n_samples, n_classes)
     """
-    # Apply temperature scaling
-    scaled_logits = logits / temperature
+    # Input validation
+    if not isinstance(logits, np.ndarray):
+        logits = np.array(logits, dtype=np.float32)
     
-    # For numerical stability, subtract the max from each row
-    exps = np.exp(scaled_logits - np.max(scaled_logits, axis=1, keepdims=True))
+    # Handle empty or invalid input
+    if logits.size == 0:
+        print("Warning: Empty logits array provided to softmax_with_temperature")
+        return np.array([])
     
-    # Normalize
-    return exps / np.sum(exps, axis=1, keepdims=True) 
+    # Handle NaN/Inf values in input
+    if np.isnan(logits).any() or np.isinf(logits).any():
+        print("Warning: NaN or Inf values in logits, replacing with finite values")
+        logits = np.nan_to_num(logits, nan=0.0, posinf=10.0, neginf=-10.0)
+    
+    # Ensure valid temperature
+    if temperature <= 0:
+        print(f"Warning: Invalid temperature {temperature}, using default of 1.0")
+        temperature = 1.0
+    
+    try:
+        # Apply temperature scaling
+        logits_scaled = logits / temperature
+        
+        # Subtract the maximum for numerical stability (prevents overflow)
+        logits_shifted = logits_scaled - np.max(logits_scaled, axis=1, keepdims=True)
+        
+        # Calculate softmax
+        exp_logits = np.exp(logits_shifted)
+        probs = exp_logits / np.sum(exp_logits, axis=1, keepdims=True)
+        
+        # Handle any remaining NaN values (should be rare)
+        if np.isnan(probs).any():
+            print("Warning: NaN values in softmax output, replacing with uniform distribution")
+            n_classes = logits.shape[1]
+            nan_mask = np.isnan(probs).any(axis=1)
+            probs[nan_mask] = 1.0 / n_classes
+        
+        return probs
+    except Exception as e:
+        print(f"Error in softmax_with_temperature: {e}")
+        # Return uniform distribution as fallback
+        return np.ones_like(logits) / logits.shape[1] 

@@ -50,10 +50,16 @@ class ModelRegistry:
             self._save_index()
         
         # Initialize or load the metrics dataframe
-        if os.path.exists(self.metrics_file):
-            self.metrics_df = pd.read_csv(self.metrics_file)
+        if os.path.exists(self.metrics_file) and os.path.getsize(self.metrics_file) > 0:
+            try:
+                self.metrics_df = pd.read_csv(self.metrics_file)
+            except (pd.errors.EmptyDataError, pd.errors.ParserError):
+                logger.warning(f"Could not read metrics file {self.metrics_file}. Creating a new one.")
+                self.metrics_df = pd.DataFrame(columns=["model_id", "model_type", "task_type", "accuracy", "fidelity"])
+                self._save_metrics()
         else:
-            self.metrics_df = pd.DataFrame()
+            # Create a new metrics file with appropriate column headers
+            self.metrics_df = pd.DataFrame(columns=["model_id", "model_type", "task_type", "accuracy", "fidelity"])
             self._save_metrics()
             
         # Initialize or load the best models index

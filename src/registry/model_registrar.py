@@ -52,50 +52,60 @@ class ModelRegistrar:
         Returns:
             str: ID of the registered model
         """
-        # Load configuration
-        config_path = os.path.join(output_dir, "train.yaml")
-        if not os.path.exists(config_path):
-            config_path = os.path.join(output_dir, "config.yaml")
+        try:
+            # Load configuration
+            config_path = os.path.join(output_dir, "train.yaml")
+            if not os.path.exists(config_path):
+                config_path = os.path.join(output_dir, "config.yaml")
+                
+            if not os.path.exists(config_path):
+                logger.error(f"Configuration file not found in {output_dir}")
+                # Create a minimal default config to allow registration to continue
+                config = OmegaConf.create({
+                    "model": {"student": {"model_type": "decision_tree"}},
+                    "target_type": "classification",
+                    "data": {"dataset_name": "unknown"}
+                })
+            else:
+                config = OmegaConf.load(config_path)
             
-        if not os.path.exists(config_path):
-            logger.error(f"Configuration file not found in {output_dir}")
+            # Determine model type and task type
+            model_type = config.model.student.get("model_type", "decision_tree")
+            task_type = config.get("target_type", "classification")
+            
+            # Find model and vectorizer paths
+            model_path = os.path.join(output_dir, "artifacts", "student.pkl")
+            vectorizer_path = os.path.join(output_dir, "artifacts", "vectorizer.pkl")
+            
+            if not os.path.exists(model_path) or not os.path.exists(vectorizer_path):
+                logger.error(f"Model or vectorizer not found in {output_dir}/artifacts/")
+                return None
+            
+            # Load metrics if not provided
+            if metrics is None:
+                metrics = self._load_metrics(output_dir, evaluation_file)
+            
+            # Create description if not provided
+            if description is None:
+                dataset_name = config.data.get("dataset_name", "unknown")
+                description = f"{model_type.capitalize()} model for {task_type} trained on {dataset_name}"
+            
+            # Register the model
+            return self.registry.register_model(
+                model_id=model_id,
+                model_type=model_type,
+                task_type=task_type,
+                description=description,
+                config=config,
+                model_path=model_path,
+                vectorizer_path=vectorizer_path,
+                metrics=metrics,
+                source_dir=output_dir,
+                copy_artifacts=True
+            )
+        except Exception as e:
+            logger.error(f"Error during model registration: {e}")
             return None
-        
-        config = OmegaConf.load(config_path)
-        
-        # Determine model type and task type
-        model_type = config.model.student.get("model_type", "decision_tree")
-        task_type = config.get("target_type", "classification")
-        
-        # Find model and vectorizer paths
-        model_path = os.path.join(output_dir, "artifacts", "student.pkl")
-        vectorizer_path = os.path.join(output_dir, "artifacts", "vectorizer.pkl")
-        
-        if not os.path.exists(model_path) or not os.path.exists(vectorizer_path):
-            logger.error(f"Model or vectorizer not found in {output_dir}/artifacts/")
-            return None
-        
-        # Load metrics if not provided
-        if metrics is None:
-            metrics = self._load_metrics(output_dir, evaluation_file)
-        
-        # Create description if not provided
-        if description is None:
-            description = f"{model_type.capitalize()} model for {task_type} trained on {config.data.dataset_name}"
-        
-        # Register the model
-        return self.registry.register_model(
-            model_id=model_id,
-            model_type=model_type,
-            task_type=task_type,
-            description=description,
-            config=config,
-            model_path=model_path,
-            vectorizer_path=vectorizer_path,
-            metrics=metrics,
-            source_dir=output_dir,
-            copy_artifacts=True
-        )
     
     def _load_metrics(
         self, 

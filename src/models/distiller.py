@@ -75,37 +75,71 @@ class Distiller:
         Returns:
             Tuple of (DataFrame with metadata, TF-IDF features, target values)
         """
+        # Ensure all inputs have the same number of samples
+        n_samples = len(hard_labels)
+        if len(teacher_logits) != n_samples:
+            print(f"Warning: Shape mismatch between teacher_logits ({len(teacher_logits)}) and hard_labels ({n_samples})")
+            # Truncate to the smaller size
+            n_samples = min(n_samples, len(teacher_logits))
+            teacher_logits = teacher_logits[:n_samples]
+            hard_labels = hard_labels[:n_samples]
+            tfidf_features = tfidf_features[:n_samples]
+            if texts is not None:
+                texts = texts[:n_samples]
+        
+        # Convert inputs to the correct types
+        teacher_logits = np.asarray(teacher_logits, dtype=np.float32)
+        hard_labels = np.asarray(hard_labels, dtype=np.int32)
+        
+        # Check for and handle NaN/Inf values
+        if np.isnan(teacher_logits).any() or np.isinf(teacher_logits).any():
+            print("Warning: NaN or Inf values detected in teacher logits")
+            teacher_logits = np.nan_to_num(teacher_logits, nan=0.0, posinf=10.0, neginf=-10.0)
+        
         # Apply temperature scaling to get soft probabilities
         soft_probs = softmax_with_temperature(teacher_logits, temperature=self.T)
         
         # Create a DataFrame with metadata
-        df = pd.DataFrame({
-            'hard_label': hard_labels,
-            'soft_prob_0': soft_probs[:, 0],
-            'soft_prob_1': soft_probs[:, 1],
-        })
-        
-        if texts is not None:
-            df['text'] = texts
-        
-        # Compute sample weights if needed
-        if self.balanced_weights:
-            sample_weights = compute_sample_weight('balanced', hard_labels)
-            df['sample_weight'] = sample_weights
-        else:
-            df['sample_weight'] = 1.0
+        try:
+            df = pd.DataFrame({
+                'hard_label': hard_labels,
+                'soft_prob_0': soft_probs[:, 0],
+                'soft_prob_1': soft_probs[:, 1],
+            })
+            
+            if texts is not None:
+                df['text'] = texts
+            
+            # Compute sample weights if needed
+            if self.balanced_weights:
+                sample_weights = compute_sample_weight('balanced', hard_labels)
+                df['sample_weight'] = sample_weights
+            else:
+                df['sample_weight'] = 1.0
+        except Exception as e:
+            print(f"Error creating distillation DataFrame: {e}")
+            # Create a minimal DataFrame if the above fails
+            df = pd.DataFrame({
+                'hard_label': hard_labels,
+                'sample_weight': 1.0
+            })
         
         # Select target for the student model based on configuration
-        if self.target_type == "classification":
-            if self.use_proba:
-                # Classification with soft targets
-                y_target = soft_probs if self.alpha == 1.0 else hard_labels
+        try:
+            if self.target_type == "classification":
+                if self.use_proba:
+                    # Classification with soft targets
+                    y_target = soft_probs if self.alpha == 1.0 else hard_labels
+                else:
+                    # Classification with hard targets
+                    y_target = hard_labels
             else:
-                # Classification with hard targets
-                y_target = hard_labels
-        else:
-            # Regression: use only the probability of the positive class
-            y_target = soft_probs[:, 1]
+                # Regression: use only the probability of the positive class
+                y_target = soft_probs[:, 1]
+        except Exception as e:
+            print(f"Error preparing target values: {e}")
+            # Fall back to hard labels if there's an error
+            y_target = hard_labels
         
         return df, tfidf_features, y_target
     
@@ -192,16 +226,27 @@ class Distiller:
             Dictionary with fidelity metrics
         """
         # Get student predictions
-        student_probs = student.predict_proba(tfidf_features)
-        student_preds = student.predict(tfidf_features)
+        try:
+            student_probs = student.predict_proba(tfidf_features)
+            student_preds = student.predict(tfidf_features)
+            
+            # Check for NaN/Inf values in student predictions
+            if np.isnan(student_probs).any() or np.isinf(student_probs).any():
+                print("Warning: NaN or Inf values detected in student predictions")
+                # Replace NaN/Inf values with small/large numbers
+                student_probs = np.nan_to_num(student_probs, nan=0.5, posinf=1.0, neginf=0.0)
+        except Exception as e:
+            print(f"Error during student prediction: {e}")
+            # Return default metrics on error
+            return {"fidelity/agreement": 0.0, "fidelity/mse": 1.0, "fidelity/cross_entropy": 10.0}
         
         # For classification, teacher_outputs are class probabilities
         if self.target_type == "classification":
             if len(teacher_outputs.shape) == 1:
                 # Convert hard labels to one-hot
                 teacher_probs = np.zeros((len(teacher_outputs), 2))
-                teacher_probs[np.arange(len(teacher_outputs)), teacher_outputs] = 1
-                teacher_preds = teacher_outputs
+                teacher_probs[np.arange(len(teacher_outputs)), teacher_outputs.astype(int)] = 1
+                teacher_preds = teacher_outputs.astype(int)
             else:
                 # Use soft probabilities
                 teacher_probs = teacher_outputs
@@ -222,18 +267,31 @@ class Distiller:
         mse = np.mean((student_probs - teacher_probs) ** 2)
         
         # Cross-entropy between teacher and student distributions
-        epsilon = 1e-15  # Small constant to avoid log(0)
-        ce = -np.mean(np.sum(teacher_probs * np.log(student_probs + epsilon), axis=1))
+        # Use more stable calculation with clipping to prevent numerical issues
+        epsilon = 1e-10  # Small constant to avoid log(0)
+        student_probs_clipped = np.clip(student_probs, epsilon, 1.0 - epsilon)
+        ce = -np.mean(np.sum(teacher_probs * np.log(student_probs_clipped), axis=1))
+        
+        # Handle any NaN or Inf values in metrics
+        if np.isnan(ce) or np.isinf(ce):
+            print("Warning: NaN or Inf values in cross entropy, using fallback value")
+            ce = 10.0  # Fallback value
+        
+        if np.isnan(mse) or np.isinf(mse):
+            print("Warning: NaN or Inf values in MSE, using fallback value")
+            mse = 1.0  # Fallback value
         
         metrics = {
-            "fidelity/agreement": agreement,
-            "fidelity/mse": mse,
-            "fidelity/cross_entropy": ce
+            "fidelity/agreement": float(agreement),
+            "fidelity/mse": float(mse),
+            "fidelity/cross_entropy": float(ce)
         }
         
         # Log metrics
         if self.writer is not None:
             for key, value in metrics.items():
-                self.writer.add_scalar(key, value, 0)
+                # Ensure value is a float and not NaN/Inf before logging
+                if isinstance(value, (int, float, np.number)) and not np.isnan(value) and not np.isinf(value):
+                    self.writer.add_scalar(key, value, 0)
         
         return metrics 
