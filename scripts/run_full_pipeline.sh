@@ -8,13 +8,6 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
-# Activate the virtual environment
-if [ ! -d "venv" ]; then
-    echo "Virtual environment not found. Running setup script first..."
-    ./scripts/setup_env.sh
-fi
-source venv/bin/activate
-
 # Set PYTHONPATH to include project root
 export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
 
@@ -42,9 +35,18 @@ python src/train_teacher.py hydra.run.dir="$OUTPUT_DIR" 2>&1 | tee -a "$LOG_FILE
 
 # Check if training succeeded
 if [ ! -f "$OUTPUT_DIR/checkpoints/teacher.ckpt" ]; then
-    echo "Teacher model training failed. Check logs for errors." | tee -a "$LOG_FILE"
+    echo "Teacher model training failed. Checkpoint not found at $OUTPUT_DIR/checkpoints/teacher.ckpt" | tee -a "$LOG_FILE"
     exit 1
 fi
+
+# Verify checkpoint file size to ensure it's not empty
+FILE_SIZE=$(stat -c%s "$OUTPUT_DIR/checkpoints/teacher.ckpt" 2>/dev/null || echo "0")
+if [ "$FILE_SIZE" -lt 1000000 ]; then  # Minimum expected size (1MB)
+    echo "Teacher model checkpoint seems too small or corrupted (${FILE_SIZE} bytes). Training may have failed." | tee -a "$LOG_FILE"
+    exit 1
+fi
+
+echo "Teacher model checkpoint successfully saved at $OUTPUT_DIR/checkpoints/teacher.ckpt (${FILE_SIZE} bytes)" | tee -a "$LOG_FILE"
 
 # Step 2: Distill to Decision Tree
 echo "Step 2: Distilling knowledge to Decision Tree..." | tee -a "$LOG_FILE"

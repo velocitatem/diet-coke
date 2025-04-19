@@ -55,6 +55,29 @@ def main(cfg: DictConfig) -> None:
     
     # Load teacher model
     logger.info(f"Loading teacher model from {cfg.paths.teacher_model}...")
+    
+    # Check if the teacher model file exists
+    if not os.path.exists(cfg.paths.teacher_model):
+        logger.error(f"Teacher model not found at {cfg.paths.teacher_model}")
+        
+        # Try to find teacher checkpoints in outputs directory
+        possible_checkpoints = []
+        for root, dirs, files in os.walk('outputs'):
+            for file in files:
+                if file == 'teacher.ckpt' or file.endswith('.ckpt'):
+                    checkpoint_path = os.path.join(root, file)
+                    possible_checkpoints.append(checkpoint_path)
+        
+        if possible_checkpoints:
+            logger.info(f"Found {len(possible_checkpoints)} possible teacher checkpoints:")
+            for i, path in enumerate(possible_checkpoints):
+                logger.info(f"  {i+1}. {path}")
+            logger.info("Try running with: python src/distill_to_tree.py paths.teacher_model=<checkpoint_path>")
+        else:
+            logger.info("No teacher checkpoints found. Make sure to run train_teacher.py first.")
+        
+        sys.exit(1)
+    
     teacher = TeacherModel.load_from_checkpoint(cfg.paths.teacher_model, cfg=cfg)
     teacher.eval()
     
