@@ -29,23 +29,30 @@ LOG_FILE="$BASE_DIR/pipeline.log"
 echo "Starting pipeline run at $(date)" | tee -a "$LOG_FILE"
 echo "Base directory: $BASE_DIR" | tee -a "$LOG_FILE"
 
-# Step 1: Train teacher model
+############################
+# STEP 1: Train teacher model
+############################
 echo "Step 1: Training teacher (BERT) model..." | tee -a "$LOG_FILE"
-python src/train_teacher.py hydra.run.dir="$BASE_DIR/teacher" 2>&1 | tee -a "$LOG_FILE"
+TEACHER_DIR="$BASE_DIR/teacher"
+python src/train_teacher.py hydra.run.dir="$TEACHER_DIR" 2>&1 | tee -a "$LOG_FILE"
 
-# Get the actual output directory created by train_teacher.py (it might include the real timestamp)
-if [ -d "$BASE_DIR/teacher" ]; then
-    TEACHER_OUTPUT_DIR="$BASE_DIR/teacher"
-else
-    # Try to find the most recent teacher directory using the pattern
-    TEACHER_OUTPUT_DIR=$(find outputs -type d -name "*" -printf "%T@ %p\n" | sort -nr | grep -m 1 -v "$BASE_DIR" | cut -d' ' -f2-)
-    if [ -z "$TEACHER_OUTPUT_DIR" ]; then
-        echo "Could not find teacher output directory" | tee -a "$LOG_FILE"
-        exit 1
-    fi
+# Find the actual output directory created by Hydra for the teacher
+ACTUAL_TEACHER_DIR=$(find outputs -type d -path "*/teacher*" -newer "$BASE_DIR" -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-)
+if [ -z "$ACTUAL_TEACHER_DIR" ]; then
+    # Try to find any recent teacher checkpoint
+    ACTUAL_TEACHER_DIR=$(dirname $(dirname $(find outputs -name "teacher.ckpt" -type f -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-)))
 fi
 
-TEACHER_CHECKPOINT="$TEACHER_OUTPUT_DIR/checkpoints/teacher.ckpt"
+if [ -z "$ACTUAL_TEACHER_DIR" ]; then
+    echo "Could not find teacher output directory" | tee -a "$LOG_FILE"
+    exit 1
+fi
+
+TEACHER_CHECKPOINT=$(find "$ACTUAL_TEACHER_DIR" -name "teacher.ckpt" -type f)
+if [ -z "$TEACHER_CHECKPOINT" ]; then
+    echo "Teacher model checkpoint not found in $ACTUAL_TEACHER_DIR" | tee -a "$LOG_FILE"
+    exit 1
+fi
 
 # Check if training succeeded
 if [ ! -f "$TEACHER_CHECKPOINT" ]; then
@@ -62,13 +69,33 @@ fi
 
 echo "Teacher model checkpoint successfully saved at $TEACHER_CHECKPOINT (${FILE_SIZE} bytes)" | tee -a "$LOG_FILE"
 
-# Step 2: Distill to Decision Tree
+############################
+# STEP 2: Distill to Decision Tree
+############################
 echo "Step 2: Distilling knowledge to Decision Tree..." | tee -a "$LOG_FILE"
-python src/distill_to_tree.py hydra.run.dir="$BASE_DIR/student" paths.teacher_model="$TEACHER_CHECKPOINT" 2>&1 | tee -a "$LOG_FILE"
+STUDENT_DIR="$BASE_DIR/student"
+python src/distill_to_tree.py hydra.run.dir="$STUDENT_DIR" paths.teacher_model="$TEACHER_CHECKPOINT" 2>&1 | tee -a "$LOG_FILE"
 
-# Get the actual student output directory
-STUDENT_OUTPUT_DIR="$BASE_DIR/student"
-STUDENT_MODEL="$STUDENT_OUTPUT_DIR/artifacts/student.pkl"
+# Find the actual output directory created by Hydra for the student
+ACTUAL_STUDENT_DIR=$(find outputs -type d -path "*/student*" -newer "$TEACHER_DIR" -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-)
+if [ -z "$ACTUAL_STUDENT_DIR" ]; then
+    # Try to find the student model in a recent directory
+    STUDENT_MODEL_PATH=$(find outputs -path "*/artifacts/student.pkl" -type f -newer "$TEACHER_DIR" -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-)
+    if [ -n "$STUDENT_MODEL_PATH" ]; then
+        ACTUAL_STUDENT_DIR=$(dirname $(dirname "$STUDENT_MODEL_PATH"))
+    fi
+fi
+
+if [ -z "$ACTUAL_STUDENT_DIR" ]; then
+    echo "Could not find student output directory" | tee -a "$LOG_FILE"
+    exit 1
+fi
+
+STUDENT_MODEL=$(find "$ACTUAL_STUDENT_DIR" -name "student.pkl" -type f)
+if [ -z "$STUDENT_MODEL" ]; then
+    echo "Student model not found in $ACTUAL_STUDENT_DIR" | tee -a "$LOG_FILE"
+    exit 1
+fi
 
 # Check if distillation succeeded
 if [ ! -f "$STUDENT_MODEL" ]; then
@@ -76,19 +103,38 @@ if [ ! -f "$STUDENT_MODEL" ]; then
     exit 1
 fi
 
-# Step 3: Evaluate both models
+echo "Student model successfully saved at $STUDENT_MODEL" | tee -a "$LOG_FILE"
+
+############################
+# STEP 3: Evaluate both models
+############################
 echo "Step 3: Evaluating models..." | tee -a "$LOG_FILE"
-python src/evaluate.py hydra.run.dir="$BASE_DIR/eval" paths.teacher_model="$TEACHER_CHECKPOINT" paths.student_model="$STUDENT_MODEL" 2>&1 | tee -a "$LOG_FILE"
+EVAL_DIR="$BASE_DIR/eval"
+python src/evaluate.py hydra.run.dir="$EVAL_DIR" paths.teacher_model="$TEACHER_CHECKPOINT" paths.student_model="$STUDENT_MODEL" 2>&1 | tee -a "$LOG_FILE"
 
-EVAL_REPORT="$BASE_DIR/eval/evaluation_report.json"
+# Find the actual evaluation directory
+ACTUAL_EVAL_DIR=$(find outputs -type d -path "*/eval*" -newer "$STUDENT_DIR" -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-)
+if [ -z "$ACTUAL_EVAL_DIR" ]; then
+    # Try to find the evaluation report in a recent directory
+    EVAL_REPORT_PATH=$(find outputs -name "evaluation_report.json" -type f -newer "$STUDENT_DIR" -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-)
+    if [ -n "$EVAL_REPORT_PATH" ]; then
+        ACTUAL_EVAL_DIR=$(dirname "$EVAL_REPORT_PATH")
+    else
+        ACTUAL_EVAL_DIR="$EVAL_DIR"
+    fi
+fi
 
+EVAL_REPORT="$ACTUAL_EVAL_DIR/evaluation_report.json"
+
+############################
 # Final summary
+############################
 echo "Pipeline completed successfully!" | tee -a "$LOG_FILE"
 echo "Results saved to:" | tee -a "$LOG_FILE"
 echo "- Teacher model: $TEACHER_CHECKPOINT" | tee -a "$LOG_FILE"
 echo "- Student model: $STUDENT_MODEL" | tee -a "$LOG_FILE"
 echo "- Evaluation: $EVAL_REPORT" | tee -a "$LOG_FILE"
-echo "To view TensorBoard logs: tensorboard --logdir $TEACHER_OUTPUT_DIR/tensorboard" | tee -a "$LOG_FILE"
+echo "To view TensorBoard logs: tensorboard --logdir $ACTUAL_TEACHER_DIR/tensorboard" | tee -a "$LOG_FILE"
 
 # Print final metrics summary
 if [ -f "$EVAL_REPORT" ]; then
