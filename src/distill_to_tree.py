@@ -24,6 +24,7 @@ from src.models.student import StudentModel
 from src.models.distiller import Distiller
 from src.utils.logging import setup_logging
 from src.utils.seed import set_seed
+from src.registry.model_registrar import ModelRegistrar
 
 
 @hydra.main(config_path="../configs", config_name="config", version_base=None)
@@ -102,8 +103,8 @@ def main(cfg: DictConfig) -> None:
         logger.info(f"{key}: {value:.4f}")
     
     # Get tree info
-    tree_info = student.get_tree_info()
-    logger.info(f"Tree info: {tree_info}")
+    tree_info = student.get_model_info()
+    logger.info(f"Model info: {tree_info}")
     
     # Save metrics
     metrics = {**fidelity_metrics, **tree_info}
@@ -114,6 +115,51 @@ def main(cfg: DictConfig) -> None:
         json.dump(serializable_metrics, f, indent=2)
     
     logger.info(f"Distillation metrics saved to {metrics_file}")
+    
+    # Register model in the registry
+    if cfg.get("registry", {}).get("enabled", False):
+        logger.info("Registering model in the registry...")
+        registry_dir = cfg.registry.get("dir", os.path.join(project_root, "model_registry"))
+        
+        # Create model registrar
+        registrar = ModelRegistrar(registry_dir)
+        
+        # Generate model ID if not specified
+        model_id = cfg.registry.get("model_id", None)
+        
+        # Generate description if not specified
+        model_type = cfg.model.student.get("model_type", "decision_tree")
+        task_type = cfg.get("target_type", "classification")
+        description = cfg.registry.get("description", 
+            f"{model_type.capitalize()} model distilled from BERT for {task_type} on {cfg.data.dataset_name}"
+        )
+        
+        # Register the model
+        model_id = registrar.register_from_run(
+            output_dir=cfg.output_dir,
+            model_id=model_id,
+            description=description,
+            metrics=serializable_metrics,
+            evaluation_file="distill_metrics.json"
+        )
+        
+        if model_id:
+            logger.info(f"Model registered with ID: {model_id}")
+            
+            # Export best models for inference if requested
+            if cfg.registry.get("export_best", False):
+                inference_dir = cfg.registry.get("inference_dir", os.path.join(project_root, "inference", "models"))
+                
+                exported = registrar.register_best_models_for_inference(
+                    inference_dir=inference_dir,
+                    task_types=[task_type],
+                    model_types=None  # Export all model types
+                )
+                
+                logger.info(f"Exported {len(exported)} best models to {inference_dir}")
+        else:
+            logger.error("Failed to register model in the registry")
+    
     logger.info("Distillation completed!")
 
 

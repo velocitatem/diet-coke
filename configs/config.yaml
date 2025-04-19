@@ -21,4 +21,13 @@ paths:
 
 # Logging
 logging:
-  tensorboard_log_dir: ${output_dir}/tensorboard 
+  tensorboard_log_dir: ${output_dir}/tensorboard
+
+# Model Registry configuration  
+registry:
+  enabled: true  # Enable model registry
+  dir: ${hydra:runtime.cwd}/model_registry  # Path to the registry directory
+  model_id: null  # Auto-generate model ID
+  description: null  # Auto-generate description
+  export_best: true  # Export best models to inference directory
+  inference_dir: ${hydra:runtime.cwd}/inference/models  # Path to the inference directory 

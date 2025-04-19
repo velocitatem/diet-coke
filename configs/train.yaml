@@ -1,5 +1,5 @@
 train:
-  epochs: 3
+  epochs: 10
   batch_size: 16
   seed: 42
   early_stopping_patience: 2

@@ -1,7 +1,29 @@
 student:
+  # Common configuration
+  model_type: "decision_tree"  # Options: decision_tree, random_forest, linear, svm, naive_bayes
+
+  # Decision Tree specific parameters
   criterion: "entropy"
   max_depth: 24
   min_samples_split: 5
   min_samples_leaf: 2
   max_features: null  # Use all features
-  class_weight: "balanced" 
+  class_weight: "balanced"
+  
+  # Random Forest specific parameters
+  n_estimators: 100
+  
+  # Linear models (Logistic Regression/Ridge) specific parameters
+  C: 1.0  # For LogisticRegression
+  alpha: 1.0  # For Ridge
+  penalty: "l2"  # For LogisticRegression
+  solver: "lbfgs"  # For both LogisticRegression and Ridge
+  max_iter: 1000  # For both LogisticRegression and Ridge
+  
+  # SVM specific parameters
+  kernel: "rbf"  # Options: linear, poly, rbf, sigmoid
+  degree: 3  # For polynomial kernel
+  gamma: "scale"  # Options: scale, auto or float
+  
+  # Naive Bayes specific parameters
+  var_smoothing: 1e-9 

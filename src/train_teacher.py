@@ -73,6 +73,8 @@ def main(cfg: DictConfig) -> None:
     trainer = pl.Trainer(
         max_epochs=cfg.train.epochs,
         accelerator=device,
+        devices=1,
+        strategy="auto",
         logger=pl.loggers.TensorBoardLogger(save_dir=cfg.logging.tensorboard_log_dir),
         callbacks=callbacks,
         precision=16 if cfg.train.fp16 else 32,
