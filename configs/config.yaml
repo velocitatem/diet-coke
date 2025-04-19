@@ -25,7 +25,7 @@ logging:
 
 # Model Registry configuration  
 registry:
-  enabled: true  # Enable model registry
+  enabled: false# Enable model registry
   dir: ${hydra:runtime.cwd}/model_registry  # Path to the registry directory
   model_id: null  # Auto-generate model ID
   description: null  # Auto-generate description
