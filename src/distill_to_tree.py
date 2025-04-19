@@ -78,8 +78,15 @@ def main(cfg: DictConfig) -> None:
         
         sys.exit(1)
     
+    # Determine the device to use
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    logger.info(f"Using device: {device}")
+    
+    # Load the teacher model and move it to the device
     teacher = TeacherModel.load_from_checkpoint(cfg.paths.teacher_model, cfg=cfg)
+    teacher.to(device)
     teacher.eval()
+    logger.info(f"Teacher model loaded and moved to {device}")
     
     # Extract TF-IDF features
     logger.info("Extracting TF-IDF features...")

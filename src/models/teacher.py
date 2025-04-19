@@ -213,12 +213,17 @@ class TeacherModel(pl.LightningModule):
             Tuple of (logits, labels)
         """
         self.model.eval()
+        device = next(self.model.parameters()).device
         all_logits = []
         all_labels = []
         
         with torch.no_grad():
             for batch in dataloader:
                 input_ids, attention_mask, labels = batch
+                input_ids = input_ids.to(device)
+                attention_mask = attention_mask.to(device)
+                labels = labels.to(device)
+                
                 outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
                 all_logits.append(outputs.logits.cpu())
                 all_labels.append(labels.cpu())

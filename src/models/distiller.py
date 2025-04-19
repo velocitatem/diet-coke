@@ -47,6 +47,13 @@ class Distiller:
         Returns:
             Tuple of (logits, labels) as numpy arrays
         """
+        # Make sure the teacher model is in eval mode
+        teacher.eval()
+        
+        # Get the device of the teacher model
+        device = next(teacher.parameters()).device
+        print(f"Teacher model is on device: {device}")
+        
         logits, labels = teacher.get_logits(dataloader)
         return logits.numpy(), labels.numpy()
     
