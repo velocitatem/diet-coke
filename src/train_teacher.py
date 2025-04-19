@@ -17,10 +17,10 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from src.data.imdb_datamodule import IMDBDataModule
-from src.models.teacher import TeacherModel
 from src.utils.logging import setup_logging
 from src.utils.seed import set_seed
+from src.data.imdb_datamodule import IMDBDataModule
+from src.models.teacher import TeacherModel
 
 
 @hydra.main(config_path="../configs", config_name="config", version_base=None)

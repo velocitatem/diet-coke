@@ -1,5 +1,4 @@
 import os
-import sys
 import logging
 from typing import Optional
 from rich.console import Console

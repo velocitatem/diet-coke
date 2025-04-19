@@ -1,4 +1,3 @@
-import pytest
 import numpy as np
 from src.data.transforms import softmax_with_temperature
 

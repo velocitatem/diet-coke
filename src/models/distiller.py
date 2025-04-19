@@ -132,7 +132,7 @@ class Distiller:
         student.fit(tfidf_features, targets, sample_weight=sample_weights)
         
         # Log tree information
-        tree_info = student.get_tree_info()
+        tree_info = student.get_model_info()
         if self.writer is not None:
             for key, value in tree_info.items():
                 self.writer.add_scalar(f"tree/{key}", value, 0)
