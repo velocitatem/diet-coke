@@ -69,10 +69,9 @@ def main(cfg: DictConfig) -> None:
     ]
     
     # Set up Lightning trainer
-    device = "auto" if cfg.train.device == "auto" else cfg.train.device
     trainer = pl.Trainer(
         max_epochs=cfg.train.epochs,
-        accelerator=device,
+        accelerator="gpu",
         devices=1,
         strategy="auto",
         logger=pl.loggers.TensorBoardLogger(save_dir=cfg.logging.tensorboard_log_dir),
