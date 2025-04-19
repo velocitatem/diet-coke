@@ -135,7 +135,9 @@ class Distiller:
         tree_info = student.get_model_info()
         if self.writer is not None:
             for key, value in tree_info.items():
-                self.writer.add_scalar(f"tree/{key}", value, 0)
+                # Only log numeric values to TensorBoard
+                if isinstance(value, (int, float, bool, np.number)):
+                    self.writer.add_scalar(f"tree/{key}", float(value), 0)
         
         return student
     
