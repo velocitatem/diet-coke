@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from omegaconf import DictConfig, OmegaConf
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+import torch
 
 # Add the project root to the Python path if not already added
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -144,7 +145,8 @@ def main(cfg: DictConfig) -> None:
     logger.info("Starting student model benchmarking...")
     
     # Create output directories
-    os.makedirs(os.path.dirname(cfg.paths.benchmark_report), exist_ok=True)
+    benchmark_dir = os.path.dirname(cfg.paths.benchmark.report)
+    os.makedirs(benchmark_dir, exist_ok=True)
     
     # Initialize data module
     logger.info("Initializing data module...")
@@ -199,8 +201,8 @@ def main(cfg: DictConfig) -> None:
     df = pd.DataFrame(results)
     
     # Save results
-    logger.info(f"Saving benchmark results to {cfg.paths.benchmark_report}...")
-    df.to_csv(cfg.paths.benchmark_report, index=False)
+    logger.info(f"Saving benchmark results to {cfg.paths.benchmark.report}...")
+    df.to_csv(cfg.paths.benchmark.report, index=False)
     
     # Print summary
     logger.info("\nBenchmark Summary:")
@@ -215,7 +217,7 @@ def main(cfg: DictConfig) -> None:
         "best_agreement": df.loc[df['agreement'].idxmax()]['config']
     }
     
-    with open(os.path.join(os.path.dirname(cfg.paths.benchmark_report), "best_configs.json"), 'w') as f:
+    with open(cfg.paths.benchmark.best_configs, 'w') as f:
         json.dump(best_configs, f, indent=2)
     
     logger.info("Benchmarking completed!")

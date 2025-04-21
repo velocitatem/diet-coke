@@ -13,5 +13,10 @@ paths:
   checkpoints: "outputs/teacher/checkpoints"
   
   # Evaluation paths
-  evaluation_report: "outputs/evaluation/evaluation_report.json"
-  benchmark_report: "outputs/benchmark/benchmark_results.csv" 
+  evaluation:
+    report: "outputs/evaluation/evaluation_report.json"
+  
+  # Benchmark paths
+  benchmark:
+    report: "outputs/benchmark/benchmark_results.csv"
+    best_configs: "outputs/benchmark/best_configs.json" 
