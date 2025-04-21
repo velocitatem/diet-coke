@@ -75,21 +75,21 @@ class DecisionTreeModel(BaseInterpretableModel):
         
         if target_type == "classification":
             self.model = DecisionTreeClassifier(
-                criterion=cfg.model.student.criterion,
-                max_depth=cfg.model.student.max_depth,
-                min_samples_split=cfg.model.student.min_samples_split,
-                min_samples_leaf=cfg.model.student.min_samples_leaf,
-                max_features=cfg.model.student.max_features,
-                class_weight=cfg.model.student.class_weight,
+                criterion=cfg.criterion,
+                max_depth=cfg.max_depth,
+                min_samples_split=cfg.min_samples_split,
+                min_samples_leaf=cfg.min_samples_leaf,
+                max_features=cfg.max_features,
+                class_weight=cfg.class_weight,
                 random_state=cfg.train.seed
             )
         else:  # regression
             self.model = DecisionTreeRegressor(
                 criterion="squared_error",
-                max_depth=cfg.model.student.max_depth,
-                min_samples_split=cfg.model.student.min_samples_split,
-                min_samples_leaf=cfg.model.student.min_samples_leaf,
-                max_features=cfg.model.student.max_features,
+                max_depth=cfg.max_depth,
+                min_samples_split=cfg.min_samples_split,
+                min_samples_leaf=cfg.min_samples_leaf,
+                max_features=cfg.max_features,
                 random_state=cfg.train.seed
             )
     
@@ -125,23 +125,23 @@ class RandomForestModel(BaseInterpretableModel):
         
         if target_type == "classification":
             self.model = RandomForestClassifier(
-                n_estimators=cfg.model.student.n_estimators,
-                criterion=cfg.model.student.criterion,
-                max_depth=cfg.model.student.max_depth,
-                min_samples_split=cfg.model.student.min_samples_split,
-                min_samples_leaf=cfg.model.student.min_samples_leaf,
-                max_features=cfg.model.student.max_features,
-                class_weight=cfg.model.student.class_weight,
+                n_estimators=cfg.n_estimators,
+                criterion=cfg.criterion,
+                max_depth=cfg.max_depth,
+                min_samples_split=cfg.min_samples_split,
+                min_samples_leaf=cfg.min_samples_leaf,
+                max_features=cfg.max_features,
+                class_weight=cfg.class_weight,
                 random_state=cfg.train.seed
             )
         else:  # regression
             self.model = RandomForestRegressor(
-                n_estimators=cfg.model.student.n_estimators,
+                n_estimators=cfg.n_estimators,
                 criterion="squared_error",
-                max_depth=cfg.model.student.max_depth,
-                min_samples_split=cfg.model.student.min_samples_split,
-                min_samples_leaf=cfg.model.student.min_samples_leaf,
-                max_features=cfg.model.student.max_features,
+                max_depth=cfg.max_depth,
+                min_samples_split=cfg.min_samples_split,
+                min_samples_leaf=cfg.min_samples_leaf,
+                max_features=cfg.max_features,
                 random_state=cfg.train.seed
             )
     
@@ -163,18 +163,18 @@ class LinearModel(BaseInterpretableModel):
         
         if target_type == "classification":
             self.model = LogisticRegression(
-                C=cfg.model.student.C,
-                penalty=cfg.model.student.penalty,
-                solver=cfg.model.student.solver,
-                max_iter=cfg.model.student.max_iter,
-                class_weight=cfg.model.student.class_weight,
+                C=cfg.C,
+                penalty=cfg.penalty,
+                solver=cfg.solver,
+                max_iter=cfg.max_iter,
+                class_weight=cfg.class_weight,
                 random_state=cfg.train.seed
             )
         else:  # regression
             self.model = Ridge(
-                alpha=cfg.model.student.alpha,
-                max_iter=cfg.model.student.max_iter,
-                solver=cfg.model.student.solver,
+                alpha=cfg.alpha,
+                max_iter=cfg.max_iter,
+                solver=cfg.solver,
                 random_state=cfg.train.seed
             )
     
@@ -205,20 +205,20 @@ class SVMModel(BaseInterpretableModel):
         
         if target_type == "classification":
             self.model = SVC(
-                C=cfg.model.student.C,
-                kernel=cfg.model.student.kernel,
-                degree=cfg.model.student.degree if cfg.model.student.kernel == 'poly' else 3,
-                gamma=cfg.model.student.gamma,
+                C=cfg.C,
+                kernel=cfg.kernel,
+                degree=cfg.degree if cfg.kernel == 'poly' else 3,
+                gamma=cfg.gamma,
                 probability=True,  # Required for predict_proba
-                class_weight=cfg.model.student.class_weight,
+                class_weight=cfg.class_weight,
                 random_state=cfg.train.seed
             )
         else:  # regression
             self.model = SVR(
-                C=cfg.model.student.C,
-                kernel=cfg.model.student.kernel,
-                degree=cfg.model.student.degree if cfg.model.student.kernel == 'poly' else 3,
-                gamma=cfg.model.student.gamma
+                C=cfg.C,
+                kernel=cfg.kernel,
+                degree=cfg.degree if cfg.kernel == 'poly' else 3,
+                gamma=cfg.gamma
             )
     
     def get_model_info(self) -> Dict[str, Any]:
@@ -241,7 +241,7 @@ class NaiveBayesModel(BaseInterpretableModel):
             raise ValueError("Naive Bayes is only available for classification tasks")
         
         self.model = GaussianNB(
-            var_smoothing=cfg.model.student.var_smoothing
+            var_smoothing=cfg.var_smoothing
         )
     
     def get_model_info(self) -> Dict[str, Any]:
@@ -277,24 +277,24 @@ def create_model(model_type: str, cfg: DictConfig, target_type: str) -> Any:
     model_cfg = OmegaConf.create({})
     
     if model_type == "decision_tree":
-        model_cfg.criterion = cfg.model.student.criterion
-        model_cfg.max_depth = cfg.model.student.max_depth
-        model_cfg.min_samples_split = cfg.model.student.min_samples_split
-        model_cfg.min_samples_leaf = cfg.model.student.min_samples_leaf
-        model_cfg.max_features = cfg.model.student.max_features
-        model_cfg.class_weight = cfg.model.student.class_weight
+        model_cfg.criterion = cfg.criterion
+        model_cfg.max_depth = cfg.max_depth
+        model_cfg.min_samples_split = cfg.min_samples_split
+        model_cfg.min_samples_leaf = cfg.min_samples_leaf
+        model_cfg.max_features = cfg.max_features
+        model_cfg.class_weight = cfg.class_weight
     elif model_type == "random_forest":
-        model_cfg.n_estimators = cfg.model.student.n_estimators
-        model_cfg.max_depth = cfg.model.student.max_depth
-        model_cfg.min_samples_split = cfg.model.student.min_samples_split
-        model_cfg.min_samples_leaf = cfg.model.student.min_samples_leaf
-        model_cfg.max_features = cfg.model.student.max_features
-        model_cfg.class_weight = cfg.model.student.class_weight
+        model_cfg.n_estimators = cfg.n_estimators
+        model_cfg.max_depth = cfg.max_depth
+        model_cfg.min_samples_split = cfg.min_samples_split
+        model_cfg.min_samples_leaf = cfg.min_samples_leaf
+        model_cfg.max_features = cfg.max_features
+        model_cfg.class_weight = cfg.class_weight
     elif model_type == "linear":
-        model_cfg.C = cfg.model.student.C
-        model_cfg.penalty = cfg.model.student.penalty
-        model_cfg.solver = cfg.model.student.solver
-        model_cfg.max_iter = cfg.model.student.max_iter
+        model_cfg.C = cfg.C
+        model_cfg.penalty = cfg.penalty
+        model_cfg.solver = cfg.solver
+        model_cfg.max_iter = cfg.max_iter
         
     return model_classes[model_type](model_cfg, target_type)
 
