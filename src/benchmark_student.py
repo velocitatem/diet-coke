@@ -190,9 +190,9 @@ def main(cfg: DictConfig) -> None:
         logger.info(f"Testing configuration {i+1}/{len(model_configs)}")
         logger.info(f"Configuration: {model_config}")
         
-        # Update student model config with current configuration
+        # Create a new config with updated student parameters
         student_cfg = OmegaConf.create(cfg)
-        student_cfg.student.update(model_config)
+        student_cfg.model.student = OmegaConf.create(model_config)
         
         # Create and train student model
         start_time = time.time()
