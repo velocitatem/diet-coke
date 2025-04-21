@@ -1,0 +1,17 @@
+paths:
+  # Data paths
+  data_dir: "data"
+  raw_data: "data/raw"
+  processed_data: "data/processed"
+  
+  # Model paths
+  teacher_model: "outputs/teacher/checkpoints/teacher.ckpt"
+  student_model: "outputs/student/student.pkl"
+  tokenizer: "outputs/tokenizer/tokenizer.json"
+  
+  # Checkpoint paths
+  checkpoints: "outputs/teacher/checkpoints"
+  
+  # Evaluation paths
+  evaluation_report: "outputs/evaluation/evaluation_report.json"
+  benchmark_report: "outputs/benchmark/benchmark_results.csv" 
