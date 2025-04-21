@@ -12,6 +12,12 @@ student:
   
   # Random Forest specific parameters
   n_estimators: 100
+  criterion: "gini"  # Added criterion for Random Forest
+  max_depth: 8
+  min_samples_split: 20
+  min_samples_leaf: 10
+  max_features: "sqrt"
+  class_weight: null
   
   # Linear models (Logistic Regression/Ridge) specific parameters
   C: 1.0  # For LogisticRegression
