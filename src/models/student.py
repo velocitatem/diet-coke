@@ -288,6 +288,7 @@ def create_model(model_type: str, params: DictConfig, target_type: str) -> Any:
         model_cfg.class_weight = params.class_weight
     elif model_type == "random_forest":
         model_cfg.n_estimators = params.n_estimators
+        model_cfg.criterion = params.criterion
         model_cfg.max_depth = params.max_depth
         model_cfg.min_samples_split = params.min_samples_split
         model_cfg.min_samples_leaf = params.min_samples_leaf
