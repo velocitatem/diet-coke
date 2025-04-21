@@ -2,34 +2,33 @@ student:
   # Common configuration
   model_type: "decision_tree"  # Options: decision_tree, random_forest, linear, svm, naive_bayes
 
-  # Decision Tree specific parameters
-  criterion: "gini"  # Changed from entropy to gini for better bias-variance tradeoff
-  max_depth: 8  # Reduced from 24 to prevent overfitting
-  min_samples_split: 20  # Increased from 5 to require more samples for splitting
-  min_samples_leaf: 10  # Increased from 2 to require more samples in leaves
-  max_features: "sqrt"  # Changed from null to sqrt for better generalization
-  class_weight: null  # Changed from balanced to null to prevent bias towards majority class
+  # Tree-based models parameters (Decision Tree and Random Forest)
+  tree_params:
+    criterion: "gini"  # Changed from entropy to gini for better bias-variance tradeoff
+    max_depth: 8  # Reduced from 24 to prevent overfitting
+    min_samples_split: 20  # Increased from 5 to require more samples for splitting
+    min_samples_leaf: 10  # Increased from 2 to require more samples in leaves
+    max_features: "sqrt"  # Changed from null to sqrt for better generalization
+    class_weight: null  # Changed from balanced to null to prevent bias towards majority class
   
   # Random Forest specific parameters
-  n_estimators: 100
-  criterion: "gini"  # Added criterion for Random Forest
-  max_depth: 8
-  min_samples_split: 20
-  min_samples_leaf: 10
-  max_features: "sqrt"
-  class_weight: null
+  random_forest_params:
+    n_estimators: 100
   
   # Linear models (Logistic Regression/Ridge) specific parameters
-  C: 1.0  # For LogisticRegression
-  alpha: 1.0  # For Ridge
-  penalty: "l2"  # For LogisticRegression
-  solver: "lbfgs"  # For both LogisticRegression and Ridge
-  max_iter: 1000  # For both LogisticRegression and Ridge
+  linear_params:
+    C: 1.0  # For LogisticRegression
+    alpha: 1.0  # For Ridge
+    penalty: "l2"  # For LogisticRegression
+    solver: "lbfgs"  # For both LogisticRegression and Ridge
+    max_iter: 1000  # For both LogisticRegression and Ridge
   
   # SVM specific parameters
-  kernel: "rbf"  # Options: linear, poly, rbf, sigmoid
-  degree: 3  # For polynomial kernel
-  gamma: "scale"  # Options: scale, auto or float
+  svm_params:
+    kernel: "rbf"  # Options: linear, poly, rbf, sigmoid
+    degree: 3  # For polynomial kernel
+    gamma: "scale"  # Options: scale, auto or float
   
   # Naive Bayes specific parameters
-  var_smoothing: 1e-9 
+  naive_bayes_params:
+    var_smoothing: 1e-9 
