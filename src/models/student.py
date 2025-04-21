@@ -275,6 +275,7 @@ def create_model(model_type: str, cfg: DictConfig, target_type: str) -> Any:
         
     # Create a new config with only the relevant parameters
     model_cfg = OmegaConf.create({})
+    model_cfg.train = OmegaConf.create({"seed": cfg.train.seed})
     
     if model_type == "decision_tree":
         model_cfg.criterion = cfg.criterion
@@ -310,7 +311,7 @@ class StudentModel:
         """
         self.cfg = cfg
         self.target_type = cfg.target_type
-        self.model_type = cfg.model.student.model_type
+        self.model_type = cfg.model_type
         
         # Create the underlying model
         self.model_impl = create_model(self.model_type, cfg, self.target_type)
