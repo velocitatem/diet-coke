@@ -253,12 +253,12 @@ class NaiveBayesModel(BaseInterpretableModel):
         }
 
 
-def create_model(model_type: str, cfg: DictConfig, target_type: str) -> Any:
+def create_model(model_type: str, params: DictConfig, target_type: str) -> Any:
     """Create a model based on the configuration.
     
     Args:
         model_type: Type of model to create
-        cfg: Configuration object
+        params: Model-specific parameters
         target_type: Type of target variable
         
     Returns:
@@ -273,29 +273,31 @@ def create_model(model_type: str, cfg: DictConfig, target_type: str) -> Any:
     if model_type not in model_classes:
         raise ValueError(f"Unknown model type: {model_type}")
         
-    # Create a new config with only the relevant parameters
-    model_cfg = OmegaConf.create({})
-    model_cfg.train = OmegaConf.create({"seed": cfg.train.seed})
+    # Create a new config with the parameters
+    model_cfg = OmegaConf.create({
+        "train": {"seed": params.train.seed}
+    })
     
+    # Add model-specific parameters
     if model_type == "decision_tree":
-        model_cfg.criterion = cfg.criterion
-        model_cfg.max_depth = cfg.max_depth
-        model_cfg.min_samples_split = cfg.min_samples_split
-        model_cfg.min_samples_leaf = cfg.min_samples_leaf
-        model_cfg.max_features = cfg.max_features
-        model_cfg.class_weight = cfg.class_weight
+        model_cfg.criterion = params.criterion
+        model_cfg.max_depth = params.max_depth
+        model_cfg.min_samples_split = params.min_samples_split
+        model_cfg.min_samples_leaf = params.min_samples_leaf
+        model_cfg.max_features = params.max_features
+        model_cfg.class_weight = params.class_weight
     elif model_type == "random_forest":
-        model_cfg.n_estimators = cfg.n_estimators
-        model_cfg.max_depth = cfg.max_depth
-        model_cfg.min_samples_split = cfg.min_samples_split
-        model_cfg.min_samples_leaf = cfg.min_samples_leaf
-        model_cfg.max_features = cfg.max_features
-        model_cfg.class_weight = cfg.class_weight
+        model_cfg.n_estimators = params.n_estimators
+        model_cfg.max_depth = params.max_depth
+        model_cfg.min_samples_split = params.min_samples_split
+        model_cfg.min_samples_leaf = params.min_samples_leaf
+        model_cfg.max_features = params.max_features
+        model_cfg.class_weight = params.class_weight
     elif model_type == "linear":
-        model_cfg.C = cfg.C
-        model_cfg.penalty = cfg.penalty
-        model_cfg.solver = cfg.solver
-        model_cfg.max_iter = cfg.max_iter
+        model_cfg.C = params.C
+        model_cfg.penalty = params.penalty
+        model_cfg.solver = params.solver
+        model_cfg.max_iter = params.max_iter
         
     return model_classes[model_type](model_cfg, target_type)
 
@@ -307,14 +309,26 @@ class StudentModel:
         """Initialize the model.
         
         Args:
-            cfg: Configuration object
+            cfg: Configuration object with structure:
+                {
+                    "model": {
+                        "type": str,  # "decision_tree", "random_forest", or "linear"
+                        "params": {
+                            # Model-specific parameters
+                        }
+                    },
+                    "target_type": str,  # "classification" or "regression"
+                    "train": {
+                        "seed": int
+                    }
+                }
         """
         self.cfg = cfg
         self.target_type = cfg.target_type
-        self.model_type = cfg.model_type
+        self.model_type = cfg.model.type
         
         # Create the underlying model
-        self.model_impl = create_model(self.model_type, cfg, self.target_type)
+        self.model_impl = create_model(self.model_type, cfg.model.params, self.target_type)
         self.model = self.model_impl.model
     
     def fit(

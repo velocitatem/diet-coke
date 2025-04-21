@@ -37,13 +37,19 @@ def create_model_configs() -> List[Dict[str, Any]]:
     # Decision Tree configurations
     tree_configs = [
         {
-            "model_type": "decision_tree",
-            "criterion": "gini",
-            "max_depth": depth,
-            "min_samples_split": split,
-            "min_samples_leaf": leaf,
-            "max_features": features,
-            "class_weight": weight
+            "model": {
+                "type": "decision_tree",
+                "params": {
+                    "criterion": "gini",
+                    "max_depth": depth,
+                    "min_samples_split": split,
+                    "min_samples_leaf": leaf,
+                    "max_features": features,
+                    "class_weight": weight,
+                    "train": {"seed": 42}
+                }
+            },
+            "target_type": "classification"
         }
         for depth in [4, 8, 12]
         for split in [10, 20, 30]
@@ -56,13 +62,19 @@ def create_model_configs() -> List[Dict[str, Any]]:
     # Random Forest configurations
     forest_configs = [
         {
-            "model_type": "random_forest",
-            "n_estimators": n_estimators,
-            "max_depth": depth,
-            "min_samples_split": split,
-            "min_samples_leaf": leaf,
-            "max_features": features,
-            "class_weight": weight
+            "model": {
+                "type": "random_forest",
+                "params": {
+                    "n_estimators": n_estimators,
+                    "max_depth": depth,
+                    "min_samples_split": split,
+                    "min_samples_leaf": leaf,
+                    "max_features": features,
+                    "class_weight": weight,
+                    "train": {"seed": 42}
+                }
+            },
+            "target_type": "classification"
         }
         for n_estimators in [50, 100, 200]
         for depth in [4, 8, 12]
@@ -76,11 +88,17 @@ def create_model_configs() -> List[Dict[str, Any]]:
     # Linear model configurations
     linear_configs = [
         {
-            "model_type": "linear",
-            "C": C,
-            "penalty": penalty,
-            "solver": solver,
-            "max_iter": max_iter
+            "model": {
+                "type": "linear",
+                "params": {
+                    "C": C,
+                    "penalty": penalty,
+                    "solver": solver,
+                    "max_iter": max_iter,
+                    "train": {"seed": 42}
+                }
+            },
+            "target_type": "classification"
         }
         for C in [0.1, 1.0, 10.0]
         for penalty in ["l1", "l2"]
@@ -191,8 +209,7 @@ def main(cfg: DictConfig) -> None:
         logger.info(f"Configuration: {model_config}")
         
         # Create a new config with updated student parameters
-        student_cfg = OmegaConf.create(cfg)
-        student_cfg.model.student = OmegaConf.create(model_config)
+        student_cfg = OmegaConf.create(model_config)
         
         # Create and train student model
         start_time = time.time()
