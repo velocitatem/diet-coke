@@ -295,10 +295,33 @@ def create_model(model_type: str, params: DictConfig, target_type: str) -> Any:
         model_cfg.max_features = params.max_features
         model_cfg.class_weight = params.class_weight
     elif model_type == "linear":
+        """
+            linear_configs = [
+        {
+            "model": {
+                "type": "linear",
+                "params": {
+                    "C": C,
+                    "penalty": penalty,
+                    "solver": solver,
+                    "max_iter": max_iter,
+                    "class_weight": weight,
+                    "train": {"seed": 42}
+                }
+            },
+            "target_type": "classification"
+        }
+        for C in [0.1, 1.0, 10.0]
+        for penalty in ["l1", "l2"]
+        for solver in ["liblinear", "saga"]
+        for max_iter in [1000, 2000]
+        for weight in [None, "balanced"]
+        """
         model_cfg.C = params.C
         model_cfg.penalty = params.penalty
         model_cfg.solver = params.solver
         model_cfg.max_iter = params.max_iter
+        model_cfg.class_weight = params.class_weight
         
     return model_classes[model_type](model_cfg, target_type)
 
