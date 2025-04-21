@@ -126,6 +126,9 @@ class IMDBDataModule(pl.LightningDataModule):
                 self.vectorizer,
                 fit=True
             )
+            
+            # Save the fitted vectorizer
+            self.save_vectorizer(self.cfg.paths.vectorizer)
         
         # For evaluation: Use the test set
         if stage == 'test' or stage is None:
@@ -135,6 +138,12 @@ class IMDBDataModule(pl.LightningDataModule):
             
             self.test_df = pd.DataFrame(test_data)
             self.test_dataset = self._create_bert_dataset(self.test_df)
+            
+            # Load the fitted vectorizer if it exists
+            if os.path.exists(self.cfg.paths.vectorizer):
+                self.load_vectorizer(self.cfg.paths.vectorizer)
+            else:
+                raise ValueError(f"Vectorizer not found at {self.cfg.paths.vectorizer}. Please run training first.")
     
     def _create_bert_dataset(self, df: pd.DataFrame) -> TensorDataset:
         """Create a TensorDataset from a DataFrame for BERT.
@@ -244,4 +253,14 @@ class IMDBDataModule(pl.LightningDataModule):
         import pickle
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         with open(save_path, 'wb') as f:
-            pickle.dump(self.vectorizer, f) 
+            pickle.dump(self.vectorizer, f)
+    
+    def load_vectorizer(self, vectorizer_path: str) -> None:
+        """Load a fitted TF-IDF vectorizer from disk.
+        
+        Args:
+            vectorizer_path: Path to the saved vectorizer
+        """
+        import pickle
+        with open(vectorizer_path, 'rb') as f:
+            self.vectorizer = pickle.load(f) 

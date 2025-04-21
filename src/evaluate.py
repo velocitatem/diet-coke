@@ -183,11 +183,8 @@ def main(cfg: DictConfig) -> None:
     teacher = TeacherModel.load_from_checkpoint(cfg.paths.teacher_model, cfg=cfg)
     teacher.eval()
     
-    # Load student model and vectorizer
+    # Load student model
     logger.info(f"Loading student model from {cfg.paths.student_model}...")
-    with open(cfg.paths.vectorizer, 'rb') as f:
-        vectorizer = pickle.load(f)
-    
     student = StudentModel.load(cfg, cfg.paths.student_model)
     
     # Create TF-IDF features for test set
