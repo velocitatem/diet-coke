@@ -120,6 +120,10 @@ def plot_decision_path_histogram(student: StudentModel, X: np.ndarray, output_di
     # Compute path lengths
     path_lengths = student.compute_path_lengths(X)
     
+    # Ensure path_lengths is a 1D array
+    if path_lengths.ndim > 1:
+        path_lengths = path_lengths.flatten()
+    
     # Create plot
     plt.figure(figsize=(10, 6))
     plt.hist(path_lengths, bins=30, alpha=0.7)
@@ -130,10 +134,10 @@ def plot_decision_path_histogram(student: StudentModel, X: np.ndarray, output_di
     
     # Add stats to the plot
     stats_text = (
-        f"Mean: {np.mean(path_lengths):.2f}\n"
-        f"Median: {np.median(path_lengths):.2f}\n"
-        f"Min: {np.min(path_lengths)}\n"
-        f"Max: {np.max(path_lengths)}"
+        f"Mean: {float(np.mean(path_lengths)):.2f}\n"
+        f"Median: {float(np.median(path_lengths)):.2f}\n"
+        f"Min: {int(np.min(path_lengths))}\n"
+        f"Max: {int(np.max(path_lengths))}"
     )
     plt.annotate(
         stats_text,
