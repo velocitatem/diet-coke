@@ -39,6 +39,7 @@ def main(cfg: DictConfig) -> None:
     
     # Create output directories
     os.makedirs(cfg.paths.checkpoints, exist_ok=True)
+    os.makedirs(os.path.dirname(cfg.paths.teacher_model), exist_ok=True)
     
     # Print config
     logger.info(f"Configuration:\n{OmegaConf.to_yaml(cfg)}")
@@ -87,21 +88,22 @@ def main(cfg: DictConfig) -> None:
     
     # Save tokenizer
     logger.info("Saving tokenizer...")
-    datamodule.save_tokenizer(os.path.join(cfg.output_dir, "artifacts/tokenizer"))
+    os.makedirs(os.path.dirname(cfg.paths.tokenizer), exist_ok=True)
+    datamodule.save_tokenizer(cfg.paths.tokenizer)
     
     # Evaluate on test set
     logger.info("Evaluating on test set...")
     test_results = trainer.test(model, datamodule=datamodule)[0]
     
     # Log and save results
-    metrics_file = os.path.join(cfg.output_dir, "val_metrics.json")
-    with open(metrics_file, "w") as f:
+    os.makedirs(os.path.dirname(cfg.paths.evaluation_report), exist_ok=True)
+    with open(cfg.paths.evaluation_report, "w") as f:
         json.dump(test_results, f, indent=2)
     
     logger.info(f"Test metrics: {test_results}")
     logger.info(f"Model saved to {cfg.paths.teacher_model}")
-    logger.info(f"Tokenizer saved to {cfg.output_dir}/artifacts/tokenizer")
-    logger.info(f"Metrics saved to {metrics_file}")
+    logger.info(f"Tokenizer saved to {cfg.paths.tokenizer}")
+    logger.info(f"Metrics saved to {cfg.paths.evaluation_report}")
 
 
 if __name__ == "__main__":

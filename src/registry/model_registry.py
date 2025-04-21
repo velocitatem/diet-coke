@@ -145,7 +145,16 @@ class ModelRegistry:
                 
                 # Save configuration
                 config_path = os.path.join(model_dir, "config.yaml")
-                OmegaConf.save(config, config_path)
+                # Convert DictConfig to dict and remove any problematic keys
+                config_dict = OmegaConf.to_container(config, resolve=True)
+                if isinstance(config_dict, dict):
+                    # Remove any problematic keys
+                    config_dict.pop('data', None)
+                    config_dict.pop('paths', None)
+                    config_dict.pop('output_dir', None)
+                    # Save the cleaned config
+                    with open(config_path, 'w') as f:
+                        OmegaConf.save(config_dict, f)
                 
                 logger.info(f"Copied model artifacts to {model_dir}")
             except Exception as e:

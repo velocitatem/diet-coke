@@ -37,58 +37,55 @@ class ModelRegistrar:
         output_dir: str,
         model_id: Optional[str] = None,
         description: Optional[str] = None,
-        metrics: Optional[Dict[str, float]] = None,
-        evaluation_file: Optional[str] = None
-    ) -> str:
-        """Register a model from a training run.
+        metrics: Optional[Dict[str, Any]] = None,
+        evaluation_file: str = "metrics.json"
+    ) -> Optional[str]:
+        """Register a model from a training run output directory.
         
         Args:
-            output_dir: Directory containing the training outputs
-            model_id: Optional ID for the model (will be auto-generated if None)
-            description: Optional description of the model
-            metrics: Optional performance metrics (will be loaded from evaluation file if None)
-            evaluation_file: Path to evaluation results (relative to output_dir)
+            output_dir: Path to the output directory containing model artifacts
+            model_id: Optional model ID (will be generated if not provided)
+            description: Optional model description
+            metrics: Optional metrics dictionary
+            evaluation_file: Name of the evaluation metrics file
             
         Returns:
-            str: ID of the registered model
+            Optional[str]: Model ID if registration was successful, None otherwise
         """
         try:
             # Load configuration
-            config_path = os.path.join(output_dir, "train.yaml")
+            config_path = os.path.join(output_dir, "config.yaml")
             if not os.path.exists(config_path):
-                config_path = os.path.join(output_dir, "config.yaml")
-                
-            if not os.path.exists(config_path):
-                logger.error(f"Configuration file not found in {output_dir}")
-                # Create a minimal default config to allow registration to continue
-                config = OmegaConf.create({
-                    "model": {"student": {"model_type": "decision_tree"}},
-                    "target_type": "classification",
-                    "data": {"dataset_name": "unknown"}
-                })
-            else:
-                config = OmegaConf.load(config_path)
+                logger.warning(f"Configuration file not found at {config_path}")
+                return None
             
-            # Determine model type and task type
-            model_type = config.model.student.get("model_type", "decision_tree")
+            config = OmegaConf.load(config_path)
+            
+            # Get model type and task type from config
+            model_type = config.get("model", {}).get("student", {}).get("model_type", "decision_tree")
             task_type = config.get("target_type", "classification")
             
-            # Find model and vectorizer paths
+            # Get model and vectorizer paths
             model_path = os.path.join(output_dir, "artifacts", "student.pkl")
             vectorizer_path = os.path.join(output_dir, "artifacts", "vectorizer.pkl")
             
             if not os.path.exists(model_path) or not os.path.exists(vectorizer_path):
-                logger.error(f"Model or vectorizer not found in {output_dir}/artifacts/")
+                logger.warning(f"Model or vectorizer files not found in {output_dir}")
                 return None
             
             # Load metrics if not provided
             if metrics is None:
-                metrics = self._load_metrics(output_dir, evaluation_file)
+                metrics_path = os.path.join(output_dir, "artifacts", evaluation_file)
+                if os.path.exists(metrics_path):
+                    with open(metrics_path, "r") as f:
+                        metrics = json.load(f)
+                else:
+                    logger.warning(f"Metrics file not found at {metrics_path}")
+                    metrics = {}
             
-            # Create description if not provided
+            # Generate description if not provided
             if description is None:
-                dataset_name = config.data.get("dataset_name", "unknown")
-                description = f"{model_type.capitalize()} model for {task_type} trained on {dataset_name}"
+                description = f"{model_type.capitalize()} model for {task_type}"
             
             # Register the model
             return self.registry.register_model(
@@ -104,7 +101,7 @@ class ModelRegistrar:
                 copy_artifacts=True
             )
         except Exception as e:
-            logger.error(f"Error during model registration: {e}")
+            logger.error(f"Error registering model from run: {e}")
             return None
     
     def _load_metrics(

@@ -166,6 +166,9 @@ def main(cfg: DictConfig) -> None:
     logger, console, tb_writer = setup_logging(cfg)
     logger.info("Starting model evaluation...")
     
+    # Create output directories
+    os.makedirs(os.path.dirname(cfg.paths.evaluation_report), exist_ok=True)
+    
     # Print config
     logger.info(f"Configuration:\n{OmegaConf.to_yaml(cfg)}")
     
@@ -218,12 +221,7 @@ def main(cfg: DictConfig) -> None:
     
     # Plot decision path histogram
     logger.info("Plotting decision path histogram...")
-    plot_path = plot_decision_path_histogram(student, test_tfidf, cfg.output_dir)
-    if tb_writer is not None:
-        # Load the image and add to TensorBoard
-        with open(plot_path, 'rb') as f:
-            img_data = f.read()
-        tb_writer.add_image('decision_path_histogram', img_data, 0, dataformats='raw')
+    plot_path = plot_decision_path_histogram(student, test_tfidf, os.path.dirname(cfg.paths.evaluation_report))
     
     # Gather all results
     results = {
@@ -243,28 +241,10 @@ def main(cfg: DictConfig) -> None:
     
     # Save evaluation report
     logger.info(f"Saving evaluation report to {cfg.paths.evaluation_report}...")
-    os.makedirs(os.path.dirname(cfg.paths.evaluation_report), exist_ok=True)
     with open(cfg.paths.evaluation_report, 'w') as f:
         json.dump(results, f, indent=2)
     
-    # Log results to TensorBoard
-    if tb_writer is not None:
-        # Log metrics
-        for key, value in teacher_metrics.items():
-            tb_writer.add_scalar(f"teacher/{key}", value, 0)
-        
-        for key, value in student_metrics.items():
-            tb_writer.add_scalar(f"student/{key}", value, 0)
-        
-        # Log fidelity
-        tb_writer.add_scalar("fidelity/test_agreement", agreement, 0)
-    
-    # Print summary
-    logger.info("Evaluation complete!")
-    logger.info(f"Teacher accuracy: {teacher_metrics['accuracy']:.4f}")
-    logger.info(f"Student accuracy: {student_metrics['accuracy']:.4f}")
-    logger.info(f"Test agreement: {agreement:.4f}")
-    logger.info(f"Detailed report saved to: {cfg.paths.evaluation_report}")
+    logger.info(f"Evaluation completed! Results saved to {cfg.paths.evaluation_report}")
 
 
 if __name__ == "__main__":

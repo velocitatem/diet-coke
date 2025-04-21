@@ -33,11 +33,21 @@ class IMDBDataModule(pl.LightningDataModule):
         self.eval_batch_size = cfg.eval.batch_size
         
         # Tokenizer for BERT
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            cfg.tokenizer.name,
-            use_fast=True,
-            cache_dir=os.environ.get("MODEL_CACHE_DIR", None)
-        )
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                cfg.tokenizer.name,
+                use_fast=True,
+                cache_dir=os.environ.get("MODEL_CACHE_DIR", None)
+            )
+        except OSError as e:
+            # If tokenizer files are not found, try to download them
+            print(f"Tokenizer not found locally. Downloading {cfg.tokenizer.name}...")
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                cfg.tokenizer.name,
+                use_fast=True,
+                cache_dir=os.environ.get("MODEL_CACHE_DIR", None),
+                local_files_only=False  # Allow downloading if not found locally
+            )
         
         # TF-IDF vectorizer for Decision Tree
         self.vectorizer = TfidfVectorizer(
@@ -58,11 +68,24 @@ class IMDBDataModule(pl.LightningDataModule):
         self.tfidf_features = None
 
     def prepare_data(self) -> None:
-        """Download the IMDB dataset."""
+        """Download the IMDB dataset and tokenizer."""
+        # Download the dataset
         load_dataset(
             self.dataset_name,
             cache_dir=os.environ.get("DATA_CACHE_DIR", None)
         )
+        
+        # Download the tokenizer
+        try:
+            AutoTokenizer.from_pretrained(
+                self.cfg.tokenizer.name,
+                use_fast=True,
+                cache_dir=os.environ.get("MODEL_CACHE_DIR", None),
+                local_files_only=False
+            )
+        except Exception as e:
+            print(f"Error downloading tokenizer: {e}")
+            raise
 
     def setup(self, stage: Optional[str] = None) -> None:
         """Set up the datasets for training, validation, and testing.

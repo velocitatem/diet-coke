@@ -43,6 +43,8 @@ def main(cfg: DictConfig) -> None:
     
     # Create output directories
     os.makedirs(os.path.dirname(cfg.paths.student_model), exist_ok=True)
+    os.makedirs(os.path.dirname(cfg.paths.vectorizer), exist_ok=True)
+    os.makedirs(os.path.dirname(cfg.paths.distill_data), exist_ok=True)
     
     # Print config
     logger.info(f"Configuration:\n{OmegaConf.to_yaml(cfg)}")
@@ -114,7 +116,6 @@ def main(cfg: DictConfig) -> None:
     
     # Save distillation data
     logger.info(f"Saving distillation data to {cfg.paths.distill_data}...")
-    os.makedirs(os.path.dirname(cfg.paths.distill_data), exist_ok=True)
     distill_df.to_parquet(cfg.paths.distill_data)
     
     # Evaluate fidelity
