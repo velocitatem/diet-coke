@@ -213,27 +213,16 @@ def main(cfg: DictConfig) -> None:
     teacher_metrics = compute_metrics(test_labels, teacher_preds, teacher_probs)
     student_metrics = compute_metrics(test_labels, student_preds, student_probs)
     
-    # Compute calibration
-    teacher_calibration = compute_calibration(test_labels, teacher_probs)
-    student_calibration = compute_calibration(test_labels, student_probs)
-    
     # Calculate fidelity metrics on test set
     agreement = np.mean(teacher_preds == student_preds)
-    
-    # Plot decision path histogram
-    logger.info("Plotting decision path histogram...")
-    plot_path = plot_decision_path_histogram(student, test_tfidf, os.path.dirname(cfg.paths.evaluation_report))
     
     # Gather all results
     results = {
         "teacher": {
             "metrics": teacher_metrics,
-            "calibration": teacher_calibration,
         },
         "student": {
             "metrics": student_metrics,
-            "calibration": student_calibration,
-            "tree_info": student.get_tree_info(),
         },
         "fidelity": {
             "test_agreement": float(agreement),
@@ -245,7 +234,17 @@ def main(cfg: DictConfig) -> None:
     with open(cfg.paths.evaluation_report, 'w') as f:
         json.dump(results, f, indent=2)
     
-    logger.info(f"Evaluation completed! Results saved to {cfg.paths.evaluation_report}")
+    # Print results to console
+    logger.info("\nEvaluation Results:")
+    logger.info("Teacher Model:")
+    for metric, value in teacher_metrics.items():
+        logger.info(f"  {metric}: {value:.4f}")
+    logger.info("\nStudent Model:")
+    for metric, value in student_metrics.items():
+        logger.info(f"  {metric}: {value:.4f}")
+    logger.info(f"\nTest Set Agreement: {agreement:.4f}")
+    
+    logger.info(f"\nEvaluation completed! Results saved to {cfg.paths.evaluation_report}")
 
 
 if __name__ == "__main__":
