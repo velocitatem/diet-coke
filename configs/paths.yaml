@@ -8,6 +8,7 @@ paths:
   teacher_model: "outputs/teacher/checkpoints/teacher.ckpt"
   student_model: "outputs/student/student.pkl"
   tokenizer: "outputs/tokenizer/tokenizer.json"
+  vectorizer: "outputs/vectorizer/vectorizer.pkl"
   
   # Checkpoint paths
   checkpoints: "outputs/teacher/checkpoints"
@@ -19,4 +20,8 @@ paths:
   # Benchmark paths
   benchmark:
     report: "outputs/benchmark/benchmark_results.csv"
-    best_configs: "outputs/benchmark/best_configs.json" 
+    best_configs: "outputs/benchmark/best_configs.json"
+  
+  # Distillation paths
+  distill:
+    data: "outputs/distill/distill_data.parquet" 
