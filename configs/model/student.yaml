@@ -3,12 +3,12 @@ student:
   model_type: "decision_tree"  # Options: decision_tree, random_forest, linear, svm, naive_bayes
 
   # Decision Tree specific parameters
-  criterion: "entropy"
-  max_depth: 24
-  min_samples_split: 5
-  min_samples_leaf: 2
-  max_features: null  # Use all features
-  class_weight: "balanced"
+  criterion: "gini"  # Changed from entropy to gini for better bias-variance tradeoff
+  max_depth: 8  # Reduced from 24 to prevent overfitting
+  min_samples_split: 20  # Increased from 5 to require more samples for splitting
+  min_samples_leaf: 10  # Increased from 2 to require more samples in leaves
+  max_features: "sqrt"  # Changed from null to sqrt for better generalization
+  class_weight: null  # Changed from balanced to null to prevent bias towards majority class
   
   # Random Forest specific parameters
   n_estimators: 100
