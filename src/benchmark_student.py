@@ -66,6 +66,7 @@ def create_model_configs() -> List[Dict[str, Any]]:
                 "type": "random_forest",
                 "params": {
                     "n_estimators": n_estimators,
+                    "criterion": "gini",
                     "max_depth": depth,
                     "min_samples_split": split,
                     "min_samples_leaf": leaf,
