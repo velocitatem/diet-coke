@@ -1,8 +1,12 @@
 teacher:
   name: "bert-base-uncased"
   num_labels: 2
-  lr: 2e-5
-  weight_decay: 0.01
+  lr: 1e-5
+  weight_decay: 0.1
   adam_epsilon: 1e-8
-  warmup_steps: 0
-  max_grad_norm: 1.0 
+  warmup_steps: 500
+  max_grad_norm: 1.0
+  dropout: 0.2
+  max_seq_length: 128
+  batch_size: 16
+  gradient_accumulation_steps: 4 
