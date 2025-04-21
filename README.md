@@ -4,6 +4,8 @@
 
 This repository implements a knowledge distillation pipeline that transfers knowledge from a fine-tuned BERT model (teacher) to a lightweight Decision Tree (student) for sentiment classification on the IMDB dataset.
 
+> 🚧 This project is very compute intensive 🚧
+
 ## Why Distillation?
 
 While large language models like BERT achieve excellent performance, they:
