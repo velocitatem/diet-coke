@@ -152,6 +152,15 @@ def main(cfg: DictConfig) -> None:
     logger.info("Initializing data module...")
     datamodule = IMDBDataModule(cfg)
     datamodule.prepare_data()
+    
+    # Check if vectorizer exists, if not create it from training data
+    if not os.path.exists(cfg.paths.vectorizer):
+        logger.info("Vectorizer not found. Creating from training data...")
+        datamodule.setup(stage="fit")
+        datamodule.save_vectorizer(cfg.paths.vectorizer)
+        logger.info(f"Vectorizer saved to {cfg.paths.vectorizer}")
+    
+    # Setup for test
     datamodule.setup(stage="test")
     
     # Load teacher model
