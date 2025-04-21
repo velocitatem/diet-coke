@@ -96,6 +96,7 @@ def create_model_configs() -> List[Dict[str, Any]]:
                     "penalty": penalty,
                     "solver": solver,
                     "max_iter": max_iter,
+                    "class_weight": weight,
                     "train": {"seed": 42}
                 }
             },
@@ -105,6 +106,7 @@ def create_model_configs() -> List[Dict[str, Any]]:
         for penalty in ["l1", "l2"]
         for solver in ["liblinear", "saga"]
         for max_iter in [1000, 2000]
+        for weight in [None, "balanced"]
     ]
     configs.extend(linear_configs)
     
