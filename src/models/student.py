@@ -253,33 +253,50 @@ class NaiveBayesModel(BaseInterpretableModel):
         }
 
 
-def create_model(model_type: str, cfg: DictConfig, target_type: str) -> BaseInterpretableModel:
-    """Factory function to create model instances.
+def create_model(model_type: str, cfg: DictConfig, target_type: str) -> Any:
+    """Create a model based on the configuration.
     
     Args:
         model_type: Type of model to create
         cfg: Configuration object
-        target_type: Type of task ('classification' or 'regression')
+        target_type: Type of target variable
         
     Returns:
-        Model instance
+        Created model
     """
     model_classes = {
         "decision_tree": DecisionTreeModel,
         "random_forest": RandomForestModel,
-        "linear": LinearModel,
-        "svm": SVMModel,
-        "naive_bayes": NaiveBayesModel
+        "linear": LinearModel
     }
     
     if model_type not in model_classes:
-        raise ValueError(f"Unknown model type: {model_type}. Available models: {list(model_classes.keys())}")
+        raise ValueError(f"Unknown model type: {model_type}")
+        
+    # Create a new config with only the relevant parameters
+    model_cfg = OmegaConf.create({})
     
-    # Special case for Naive Bayes which is classification-only
-    if model_type == "naive_bayes" and target_type != "classification":
-        raise ValueError("Naive Bayes is only available for classification tasks")
-    
-    return model_classes[model_type](cfg, target_type)
+    if model_type == "decision_tree":
+        model_cfg.criterion = cfg.model.student.criterion
+        model_cfg.max_depth = cfg.model.student.max_depth
+        model_cfg.min_samples_split = cfg.model.student.min_samples_split
+        model_cfg.min_samples_leaf = cfg.model.student.min_samples_leaf
+        model_cfg.max_features = cfg.model.student.max_features
+        model_cfg.class_weight = cfg.model.student.class_weight
+    elif model_type == "random_forest":
+        model_cfg.n_estimators = cfg.model.student.n_estimators
+        model_cfg.max_depth = cfg.model.student.max_depth
+        model_cfg.min_samples_split = cfg.model.student.min_samples_split
+        model_cfg.min_samples_leaf = cfg.model.student.min_samples_leaf
+        model_cfg.max_features = cfg.model.student.max_features
+        model_cfg.class_weight = cfg.model.student.class_weight
+    elif model_type == "linear":
+        model_cfg.C = cfg.model.student.C
+        model_cfg.penalty = cfg.model.student.penalty
+        model_cfg.solver = cfg.model.student.solver
+        model_cfg.max_iter = cfg.model.student.max_iter
+        
+    return model_classes[model_type](model_cfg, target_type)
 
 
 class StudentModel:
